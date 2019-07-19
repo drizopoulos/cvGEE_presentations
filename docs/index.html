@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>GLMMadaptive: Mixed Models for Non-Normal Data in R</title>
+  <title>cvGEE: Cross-Validated Scoring Rules for GEE</title>
 
   <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta http-equiv="X-UA-Compatible" content="chrome=1">
   <meta name="generator" content="pandoc" />
 
@@ -20,7 +19,7 @@
     var SLIDE_CONFIG = {
       // Slide settings
       settings: {
-                title: 'GLMMadaptive:<br/>Mixed Models for Non-Normal Data in R',
+                title: 'cvGEE:<br/>Cross-Validated Scoring Rules for GEE',
                         useBuilds: true,
         usePrettify: true,
         enableSlideAreas: true,
@@ -87,6 +86,10 @@
       transition: opacity 0.6s ease-in 0.4s;
       opacity: 0;
     }
+/* https://github.com/ropensci/plotly/pull/524#issuecomment-468142578 */
+slide:not(.current) .plotly.html-widget{
+  display: block;
+}
 
     slides > slide:not(.nobackground):before {
       font-size: 12pt;
@@ -120,7 +123,7 @@
       <h1 data-config-title><!-- populated from slide_config.json --></h1>
       <h2 data-config-subtitle><!-- populated from slide_config.json --></h2>
       <p data-config-presenter><!-- populated from slide_config.json --></p>
-            <p style="margin-top: 6px; margin-left: -2px;">February 6</p>
+            <p style="margin-top: 6px; margin-left: -2px;">????</p>
           </hgroup>
   </slide>
 
@@ -141,7 +144,7 @@
 <li>Longitudinal data</li>
 <li>Clustered data</li>
 <li>Multilevel data</li>
-<li>&#8230;</li>
+<li>…</li>
 </ul></li>
 </ul>
 
@@ -308,32 +311,6 @@
 
 </article></slide><slide class="segue dark nobackground level1"><hgroup class = 'auto-fadein'><h2>What is available in R</h2></hgroup><article  id="what-is-available-in-r">
 
-</article></slide><slide class=""><hgroup><h2>Mixed model packages in R - 1</h2></hgroup><article  id="mixed-model-packages-in-r---1">
-
-<ul>
-<li><code>lme4::glmer()</code>
-
-<ul>
-<li>Laplace approximation as default</li>
-<li><font color = "red">adaptive Gaussian quadrature only for scalar random effects</font> <br/><br/></li>
-</ul></li>
-<li><code>glmmTMB::glmmTMB()</code> more flexible than <strong>lme4</strong>
-
-<ul>
-<li>Laplace approximation <br/><br/></li>
-</ul></li>
-<li><code>glmmsr::glmm()</code>
-
-<ul>
-<li>Monte Carlo importance sampling <br/><br/></li>
-</ul></li>
-<li><code>MASS::glmmPQL()</code>
-
-<ul>
-<li>PQL based on <code>nlme::lme()</code></li>
-</ul></li>
-</ul>
-
 </article></slide><slide class=""><hgroup><h2>Does it matter? - 1</h2></hgroup><article  id="does-it-matter---1">
 
 <ul>
@@ -345,64 +322,18 @@
 </ul></li>
 </ul>
 
-<pre class = 'prettyprint lang-r'>fm_PQL &lt;- glmmPQL(outcome ~ time * treatment, random = ~ 1 | patientID, 
-                  data = toenail, family = binomial())
+<pre class = 'prettyprint lang-r'>pbc2$spiders2 &lt;- as.numeric(pbc2$spiders == &quot;Yes&quot;)
+fm1 &lt;- geeglm(spiders2 ~ year + drug + age + sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = &quot;independence&quot;)
 
-fm_Laplace &lt;- glmer(outcome ~ time * treatment + (1 | patientID), 
-                  data = toenail, family = binomial())
+fm2 &lt;- geeglm(spiders2 ~ year + drug + age * sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = &quot;independence&quot;)
 
-fm_AGQ15 &lt;-  glmer(outcome ~ time * treatment + (1 | patientID), 
-                  data = toenail, family = binomial(), nAGQ = 15)</pre>
-
-</article></slide><slide class=""><hgroup><h2>Does it matter? - 2</h2></hgroup><article  id="does-it-matter---2">
-
-<ul>
-<li>The Toenail dataset - results</li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>cbind(PQL = fixef(fm_PQL), Laplace = fixef(fm_Laplace), AGQ_15 = fixef(fm_AGQ15))</pre>
-
-<pre >##                                   PQL    Laplace     AGQ_15
-## (Intercept)               -0.74324709 -2.5098642 -1.6473652
-## time                      -0.29469102 -0.3997340 -0.3924231
-## treatmentterbinafine      -0.03480231 -0.3048303 -0.1663130
-## time:treatmentterbinafine -0.10017515 -0.1371352 -0.1371755</pre>
-
-</article></slide><slide class=""><hgroup><h2>Does it matter? - 3</h2></hgroup><article  id="does-it-matter---3">
-
-<ul>
-<li>The Salamanders dataset <code>data(&quot;Salamanders&quot;, package = &quot;glmmTMB&quot;)</code>
-
-<ul>
-<li>mixed effects truncated Poisson</li>
-<li><font color = "red">(spoiler alert: Code) </font></li>
-</ul></li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>gm_Laplace &lt;- glmmTMB(count ~ spp + mined + (1 | site), ziformula = ~ spp + mined, 
-                      family = truncated_poisson(), data = Salamanders)
-
-gm_AGQ25 &lt;- mixed_model(count ~ spp + mined, random = ~ 1 | site, 
-                        zi_fixed = ~ spp + mined, 
-                        family = hurdle.poisson(), data = Salamanders, nAGQ = 25)</pre>
-
-</article></slide><slide class=""><hgroup><h2>Does it matter? - 4</h2></hgroup><article  id="does-it-matter---4">
-
-<ul>
-<li>The Salamanders dataset - results</li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>cbind(Laplace = fixef(gm_Laplace)$cond, AGQ_25 = fixef(gm_AGQ25))</pre>
-
-<pre >##                 Laplace     AGQ_25
-## (Intercept) -0.06702286 -3.1900355
-## sppPR       -0.52092708  0.1976119
-## sppDM        0.22457540  0.9137361
-## sppEC-A     -0.19548416  0.6538284
-## sppEC-L      0.64672238  1.4999425
-## sppDES-L     0.60513701  0.9589269
-## sppDF        0.04602476  0.3426018
-## minedno      1.01446593  0.7137289</pre>
+fm3 &lt;- geeglm(spiders2 ~ year + drug + age * sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = &quot;independence&quot;)</pre>
 
 </article></slide><slide class=""><hgroup><h2>Mixed model packages in R - 2</h2></hgroup><article  id="mixed-model-packages-in-r---2">
 
@@ -434,237 +365,10 @@ gm_AGQ25 &lt;- mixed_model(count ~ spp + mined, random = ~ 1 | site,
 
 </article></slide><slide class="segue dark nobackground level1"><hgroup class = 'auto-fadein'><h2>What GLMMadaptive offers</h2></hgroup><article  id="what-glmmadaptive-offers">
 
-</article></slide><slide class=""><hgroup><h2>Model fitting</h2></hgroup><article  id="model-fitting">
-
-<ul>
-<li>The basic model-fitting function is <code>GLMMadaptive::mixed_model()</code></li>
-</ul>
-
-<p><br/></p>
-
-<ul>
-<li>Required arguments
-
-<ul>
-<li><code>fixed</code> a formula for the fixed effects</li>
-<li><code>random</code> a formula for the random effects</li>
-<li><code>data</code> a data frame containing the variables to use</li>
-<li><code>family</code> a family object specifying the model</li>
-</ul></li>
-</ul>
-
-</article></slide><slide class=""><hgroup><h2>Available models: Standard GLMMs</h2></hgroup><article  id="available-models-standard-glmms">
-
-<ul>
-<li>It fits the most frequently-used GLMMs
-
-<ul>
-<li>mixed effects logistic regression <code>family = binomial()</code></li>
-<li>mixed effects Poisson regression <code>family = poisson()</code></li>
-</ul></li>
-<li><p>A basic example:</p>
-
 <pre class = 'prettyprint lang-r'>mixed_model(fixed = y ~ time * group, random = ~ time | id, data = DF,
-        family = binomial(), nAGQ = 15)</pre></li>
-</ul>
+            family = binomial(), nAGQ = 15)</pre>
 
 <pre class = 'prettyprint lang-r'>vignette(&quot;GLMMadaptive_basics&quot;, package = &quot;GLMMadaptive&quot;)</pre>
-
-</article></slide><slide class=""><hgroup><h2>Available models: Specialized GLMMs - 1</h2></hgroup><article  id="available-models-specialized-glmms---1">
-
-<p><br/></p>
-
-<ul>
-<li>It fits some non-standard GLMMs
-
-<ul>
-<li>negative binomial mixed model <code>family = negative.binomial()</code></li>
-<li>Student&#39;s-t mixed model <code>family = students.t()</code></li>
-<li>Beta mixed model <code>family = beta.fam()</code></li>
-</ul></li>
-</ul>
-
-</article></slide><slide class=""><hgroup><h2>Available models: Specialized GLMMs - 2</h2></hgroup><article  id="available-models-specialized-glmms---2">
-
-<ul>
-<li>Zero-inflated mixed models
-
-<ul>
-<li>zero-inflated Poisson <code>family = zi.poisson()</code></li>
-<li>zero-inflated negative binomial <code>family = zi.negative.binomial()</code> <br/><br/></li>
-</ul></li>
-<li>Hurdle mixed models
-
-<ul>
-<li>hurdle Poisson <code>family = hurdle.poisson()</code></li>
-<li>hurdle negative binomial <code>family = hurdle.negative.binomial()</code></li>
-<li>hurdle log-normal <code>family = hurdle.lognormal()</code></li>
-<li>hurdle Beta <code>family = hurdle.beta.fam()</code></li>
-</ul></li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>vignette(&quot;ZeroInflated_and_TwoPart_Models&quot;, package = &quot;GLMMadaptive&quot;)</pre>
-
-</article></slide><slide class=""><hgroup><h2>User-defined models</h2></hgroup><article  id="user-defined-models">
-
-<p><br/></p>
-
-<ul>
-<li>The user can define its own mixed model using a user-defined <code>family</code> object
-
-<ul>
-<li>specify log-density function</li>
-<li>specify derivatives (optional)</li>
-</ul></li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>vignette(&quot;Custom_Models&quot;, package = &quot;GLMMadaptive&quot;)</pre>
-
-</article></slide><slide class=""><hgroup><h2>What the user needs - 1</h2></hgroup><article  id="what-the-user-needs---1">
-
-<ul>
-<li><code>summary()</code>: Estimated coefficients, standard errors &amp; p-values</li>
-</ul>
-
-<p><br/></p>
-
-<ul>
-<li><code>anova()</code>: Hypothesis testing
-
-<ul>
-<li>Wald tests</li>
-<li>likelihood ratio tests</li>
-<li>AIC/BIC</li>
-</ul></li>
-</ul>
-
-</article></slide><slide class=""><hgroup><h2>What the user needs - 2</h2></hgroup><article  id="what-the-user-needs---2">
-
-<p><br/></p>
-
-<ul>
-<li>Effects Plots
-
-<ul>
-<li>build-in <code>effectPlotData()</code></li>
-<li>support for <strong>effects</strong></li>
-<li>support for <strong>ggeffects</strong></li>
-</ul></li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>vignette(&quot;Methods_MixMod&quot;, package = &quot;GLMMadaptive&quot;)</pre>
-
-</article></slide><slide class=""><hgroup><h2>What the user needs - 3</h2></hgroup><article  id="what-the-user-needs---3">
-
-<p><br/></p>
-
-<ul>
-<li>Goodness of Fit
-
-<ul>
-<li>support for <strong>DHARMa</strong></li>
-<li><font color = "red">caveat:</font> MAR missing data</li>
-</ul></li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>vignette(&quot;Goodness_of_Fit&quot;, package = &quot;GLMMadaptive&quot;)</pre>
-
-</article></slide><slide class=""><hgroup><h2>What the user needs - 4</h2></hgroup><article  id="what-the-user-needs---4">
-
-<p><br/></p>
-
-<ul>
-<li>Multiple comparisons
-
-<ul>
-<li>support for <strong>emmeans</strong></li>
-<li>support for <strong>multcomp</strong></li>
-</ul></li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>vignette(&quot;Multiple_Comparisons&quot;, package = &quot;GLMMadaptive&quot;)</pre>
-
-</article></slide><slide class=""><hgroup><h2>What the user needs - 5</h2></hgroup><article  id="what-the-user-needs---5">
-
-<ul>
-<li>Predictions via <code>predict()</code> method
-
-<ul>
-<li>average subject</li>
-<li>marginal</li>
-<li>subject-specific</li>
-<li>dynamic subject-specific</li>
-<li>confidence &amp; prediction intervals</li>
-<li>proper scoring rules via <code>scoring_rules()</code></li>
-</ul></li>
-</ul>
-
-<pre class = 'prettyprint lang-r'>vignette(&quot;Methods_MixMod&quot;, package = &quot;GLMMadaptive&quot;)
-
-vignette(&quot;Dynamic_Predictions&quot;, package = &quot;GLMMadaptive&quot;)</pre>
-
-</article></slide><slide class=""><hgroup><h2>What the user needs - 6</h2></hgroup><article  id="what-the-user-needs---6">
-
-<ul>
-<li>Methods for standard generics
-
-<ul>
-<li><code>confint()</code>, <code>vcov()</code> including the sandwich estimator</li>
-<li><code>coef()</code>, <code>fixef()</code>, <code>ranef()</code></li>
-<li><code>logLik()</code>, <code>nobs()</code></li>
-<li><code>fitted()</code>, <code>residuals()</code></li>
-<li><code>simulate()</code> <br/><br/></li>
-</ul></li>
-<li>For developers
-
-<ul>
-<li><code>model.matrix()</code>, <code>model.frame()</code></li>
-<li><code>terms()</code>, <code>formula()</code>, <code>family()</code></li>
-</ul></li>
-</ul>
-
-</article></slide><slide class=""><hgroup><h2>A Few extras - 1</h2></hgroup><article  id="a-few-extras---1">
-
-<p><br/></p>
-
-<ul>
-<li>Interpretation
-
-<ul>
-<li>with nonlinear link functions fixed effects have an interpretation conditional on the random effects [1]</li>
-<li><font color = "red">(very) often not what we want</font> <br/><br/></li>
-</ul></li>
-</ul>
-
-<p><font size = 5>[1] an explanation can be found at: <a href='https://stats.stackexchange.com/questions/365907/interpretation-of-fixed-effects-from-mixed-effect-logistic-regression' title=''>https://stats.stackexchange.com/questions/365907/interpretation-of-fixed-effects-from-mixed-effect-logistic-regression</a></font></p>
-
-</article></slide><slide class=""><hgroup><h2>A Few extras - 2</h2></hgroup><article  id="a-few-extras---2">
-
-<p><br/></p>
-
-<ul>
-<li>Marginalized coefficients
-
-<ul>
-<li>Heagerty et al. have proposed marginalized mixed models<br/> \({\color{red} \Rightarrow}\) <font color = "red">Computationally intensive to fit</font></li>
-<li><a href='https://dx.doi.org/10.1111/biom.12707' title=''>Hedeker et al.</a> recently proposed an easier alternative solution</li>
-<li>function <code>marginal_coefs()</code> implements Hedeker&#39;s et al. solution with standard errors</li>
-</ul></li>
-</ul>
-
-</article></slide><slide class=""><hgroup><h2>A Few extras - 3</h2></hgroup><article  id="a-few-extras---3">
-
-<ul>
-<li>Separation issues
-
-<ul>
-<li>in logistic, Poisson and negative binomial data we may encounter (complete) separation [2]</li>
-<li><code>penalized</code> argument of <code>mixed_model()</code> places a Student&#39;s t penalty on the fixed effects</li>
-<li>the user can control scale (default 1) and df (default 3) <br/><br/></li>
-</ul></li>
-</ul>
-
-<p><font size = 5>[2] an example at: <a href='https://stats.stackexchange.com/questions/386553/linear-mixed-model-for-placement-of-nuclear-stress-in-10-word-turns' title=''>https://stats.stackexchange.com/questions/386553/linear-mixed-model-for-placement-of-nuclear-stress-in-10-word-turns</a></font></p>
 
 </article></slide><slide class=""><hgroup><h2>Documentation</h2></hgroup><article  id="documentation">
 
@@ -677,40 +381,27 @@ vignette(&quot;Dynamic_Predictions&quot;, package = &quot;GLMMadaptive&quot;)</p
 <p><br/></p>
 
 <ul>
-<li>Dedicated website: <a href='https://drizopoulos.github.io/GLMMadaptive/' title=''>https://drizopoulos.github.io/GLMMadaptive/</a></li>
+<li>Dedicated website: <a href='https://drizopoulos.github.io/cvGEE/' title=''>https://drizopoulos.github.io/cvGEE/</a></li>
 </ul>
 
-</article></slide><slide class="segue dark nobackground level1"><hgroup class = 'auto-fadein'><h2>What the future holds&#8230;</h2></hgroup><article  id="what-the-future-holds...">
+</article></slide><slide class="segue dark nobackground level1"><hgroup class = 'auto-fadein'><h2>What the future holds…</h2></hgroup><article  id="what-the-future-holds">
 
 </article></slide><slide class=""><hgroup><h2>Future plans</h2></hgroup><article  id="future-plans">
 
 <ul>
-<li>Implement nested random effects
-
-<ul>
-<li>using <strong>Matrix</strong> sparse matrices classes</li>
-</ul></li>
+<li>XXX</li>
 </ul>
 
 <p><br/></p>
 
 <ul>
-<li>More options for the covariance matrix of the random effects
-
-<ul>
-<li>auto-regressive</li>
-<li>compound symmetry</li>
-</ul></li>
+<li>XXX</li>
 </ul>
 
 <p><br/></p>
 
 <ul>
-<li>Extra models
-
-<ul>
-<li>Conway-Maxwell-Poisson mixed model</li>
-</ul></li>
+<li>XXX</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2></h2></hgroup><article >
@@ -733,7 +424,7 @@ vignette(&quot;Dynamic_Predictions&quot;, package = &quot;GLMMadaptive&quot;)</p
 <div align = "center">
 
 <div align="center">
-<p><a href='https://drizopoulos.github.io/GLMMadaptive_presentations/' title=''>https://drizopoulos.github.io/GLMMadaptive_presentations/</a></p></div></article></slide>
+<p><a href='https://drizopoulos.github.io/cvGEE_presentations/' title=''>https://drizopoulos.github.io/cvGEE_presentations/</a></p></div></article></slide>
 
 
   <slide class="backdrop"></slide>
