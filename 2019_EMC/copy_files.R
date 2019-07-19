@@ -1,3 +1,6 @@
+rmarkdown::render_site(input = "./2019_EMC", encoding = 'UTF-8')
+
+
 dirs <- list.dirs(path = "./2019_EMC/_site/", full.names = FALSE, recursive = TRUE)
 files <- list.files(path = "./2019_EMC/_site/", include.dirs = TRUE, recursive = TRUE)
 
