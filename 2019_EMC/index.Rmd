@@ -1,7 +1,7 @@
 ---
-title: "GLMMadaptive:<br/>Mixed Models for Non-Normal Data in R"
+title: "cvGEE:<br/>Cross-Validated Scoring Rules for GEE"
 author: "Dimitris Rizopoulos"
-date: "February 6"
+date: "????"
 output:
   ioslides_presentation:
     css: pres.css
@@ -17,10 +17,11 @@ runtime: shiny
 </script>
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
-library("MASS")
-library("lme4")
-library("glmmTMB")
-library("GLMMadaptive")
+library("cvGEE")
+library("geepack")
+library("splines")
+library("lattice")
+library("MESS")
 data("toenail", package = "HSAUR2")
 ```
 
@@ -153,20 +154,6 @@ ${\color{red} \Rightarrow}$ <font color = "black">Several solutions available in
     
 # What is available in R
 
-## Mixed model packages in R - 1
-
-- `lme4::glmer()`
-    + Laplace approximation as default
-    + <font color = "red">adaptive Gaussian quadrature only for scalar random effects</font>
-<br/><br/>
-- `glmmTMB::glmmTMB()` more flexible than **lme4**
-    + Laplace approximation
-<br/><br/>
-- `glmmsr::glmm()`
-    + Monte Carlo importance sampling
-<br/><br/>
-- `MASS::glmmPQL()`
-    + PQL based on `nlme::lme()`
 
 ## Does it matter? - 1
 
@@ -175,45 +162,18 @@ ${\color{red} \Rightarrow}$ <font color = "black">Several solutions available in
     + PQL vs Laplace vs adaptive Gaussian quadrature
 
 ```{r toenail_analysis, message = FALSE}
-fm_PQL <- glmmPQL(outcome ~ time * treatment, random = ~ 1 | patientID, 
-                  data = toenail, family = binomial())
+pbc2$spiders2 <- as.numeric(pbc2$spiders == "Yes")
+fm1 <- geeglm(spiders2 ~ year + drug + age + sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = "independence")
 
-fm_Laplace <- glmer(outcome ~ time * treatment + (1 | patientID), 
-                  data = toenail, family = binomial())
+fm2 <- geeglm(spiders2 ~ year + drug + age * sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = "independence")
 
-fm_AGQ15 <-  glmer(outcome ~ time * treatment + (1 | patientID), 
-                  data = toenail, family = binomial(), nAGQ = 15)
-```
-
-## Does it matter? - 2
-
-- The Toenail dataset - results
-
-```{r toenail_results}
-cbind(PQL = fixef(fm_PQL), Laplace = fixef(fm_Laplace), AGQ_15 = fixef(fm_AGQ15))
-```
-
-## Does it matter? - 3
-
-- The Salamanders dataset `data("Salamanders", package = "glmmTMB")`
-    + mixed effects truncated Poisson
-    + <font color = "red">(spoiler alert: Code) </font>
-
-```{r Salamanders_analysis}
-gm_Laplace <- glmmTMB(count ~ spp + mined + (1 | site), ziformula = ~ spp + mined, 
-                      family = truncated_poisson(), data = Salamanders)
-
-gm_AGQ25 <- mixed_model(count ~ spp + mined, random = ~ 1 | site, 
-                        zi_fixed = ~ spp + mined, 
-                        family = hurdle.poisson(), data = Salamanders, nAGQ = 25)
-```
-
-## Does it matter? - 4
-
-- The Salamanders dataset - results
-
-```{r Salamanders_results}
-cbind(Laplace = fixef(gm_Laplace)$cond, AGQ_25 = fixef(gm_AGQ25))
+fm3 <- geeglm(spiders2 ~ year + drug + age * sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = "independence")
 ```
 
 ## Mixed model packages in R - 2
@@ -243,25 +203,6 @@ cbind(Laplace = fixef(gm_Laplace)$cond, AGQ_25 = fixef(gm_AGQ25))
     
 # What GLMMadaptive offers
 
-## Model fitting
-
-- The basic model-fitting function is `GLMMadaptive::mixed_model()`
-
-<br/>
-
-- Required arguments
-    + `fixed` a formula for the fixed effects
-    + `random` a formula for the random effects
-    + `data` a data frame containing the variables to use
-    + `family` a family object specifying the model
-
-## Available models: Standard GLMMs
-
-- It fits the most frequently-used GLMMs
-    + mixed effects logistic regression `family = binomial()`
-    + mixed effects Poisson regression `family = poisson()`
-
-- A basic example:
 ```r
 mixed_model(fixed = y ~ time * group, random = ~ time | id, data = DF,
             family = binomial(), nAGQ = 15)
@@ -271,148 +212,6 @@ mixed_model(fixed = y ~ time * group, random = ~ time | id, data = DF,
 vignette("GLMMadaptive_basics", package = "GLMMadaptive")
 ```
 
-## Available models: Specialized GLMMs - 1
-
-<br/>
-
-- It fits some non-standard GLMMs
-    + negative binomial mixed model `family = negative.binomial()`
-    + Student's-t mixed model `family = students.t()`
-    + Beta mixed model `family = beta.fam()`
-
-## Available models: Specialized GLMMs - 2
-
-- Zero-inflated mixed models
-    + zero-inflated Poisson `family = zi.poisson()`
-    + zero-inflated negative binomial `family = zi.negative.binomial()`
-<br/><br/>
-- Hurdle mixed models
-    + hurdle Poisson `family = hurdle.poisson()`
-    + hurdle negative binomial `family = hurdle.negative.binomial()`
-    + hurdle log-normal `family = hurdle.lognormal()`
-    + hurdle Beta `family = hurdle.beta.fam()`
-
-```r
-vignette("ZeroInflated_and_TwoPart_Models", package = "GLMMadaptive")
-```
-    
-## User-defined models
-
-<br/>
-
-- The user can define its own mixed model using a user-defined `family` object
-    + specify log-density function
-    + specify derivatives (optional)
-    
-```r
-vignette("Custom_Models", package = "GLMMadaptive")
-```
-
-## What the user needs - 1
-
-- `summary()`: Estimated coefficients, standard errors & p-values
-
-<br/>
-
-- `anova()`: Hypothesis testing
-    + Wald tests
-    + likelihood ratio tests
-    + AIC/BIC
-
-## What the user needs - 2
-
-<br/>
-
-- Effects Plots
-    + build-in `effectPlotData()`
-    + support for **effects**
-    + support for **ggeffects**
-
-```r
-vignette("Methods_MixMod", package = "GLMMadaptive")
-```
-## What the user needs - 3
-
-<br/>
-
-- Goodness of Fit
-    + support for **DHARMa**
-    + <font color = "red">caveat:</font> MAR missing data
-
-```r
-vignette("Goodness_of_Fit", package = "GLMMadaptive")
-```
-
-## What the user needs - 4
-
-<br/>
-
-- Multiple comparisons
-    + support for **emmeans**
-    + support for **multcomp**
-
-```r
-vignette("Multiple_Comparisons", package = "GLMMadaptive")
-```
-## What the user needs - 5
-
-- Predictions via `predict()` method
-    + average subject
-    + marginal
-    + subject-specific
-    + dynamic subject-specific
-    + confidence & prediction intervals
-    + proper scoring rules via `scoring_rules()`
-
-```r
-vignette("Methods_MixMod", package = "GLMMadaptive")
-
-vignette("Dynamic_Predictions", package = "GLMMadaptive")
-```
-
-## What the user needs - 6
-
-- Methods for standard generics
-    + `confint()`, `vcov()` including the sandwich estimator
-    + `coef()`, `fixef()`, `ranef()`
-    + `logLik()`, `nobs()`
-    + `fitted()`, `residuals()`
-    + `simulate()`
-<br/><br/>
-- For developers
-    + `model.matrix()`, `model.frame()`
-    + `terms()`, `formula()`, `family()`
-
-## A Few extras - 1
-
-<br/>
-
-- Interpretation
-    + with nonlinear link functions fixed effects have an interpretation conditional on the random effects [1]
-    + <font color = "red">(very) often not what we want</font>
-<br/><br/>
-
-<font size = 5>[1] an explanation can be found at: [https://stats.stackexchange.com/questions/365907/interpretation-of-fixed-effects-from-mixed-effect-logistic-regression](https://stats.stackexchange.com/questions/365907/interpretation-of-fixed-effects-from-mixed-effect-logistic-regression)</font>
-
-## A Few extras - 2
-
-<br/>
-
-- Marginalized coefficients
-    + Heagerty et al. have proposed marginalized mixed models<br/>
-    ${\color{red} \Rightarrow}$ <font color = "red">Computationally intensive to fit</font>
-    + [Hedeker et al.](https://dx.doi.org/10.1111/biom.12707) recently proposed an easier alternative solution
-    + function `marginal_coefs()` implements Hedeker's et al. solution with standard errors
-
-## A Few extras - 3
-
-- Separation issues
-    + in logistic, Poisson and negative binomial data we may encounter (complete) separation [2]
-    + `penalized` argument of `mixed_model()` places a Student's t penalty on the fixed effects 
-    + the user can control scale (default 1) and df (default 3)
-<br/><br/>
-
-<font size = 5>[2] an example at: [https://stats.stackexchange.com/questions/386553/linear-mixed-model-for-placement-of-nuclear-stress-in-10-word-turns](https://stats.stackexchange.com/questions/386553/linear-mixed-model-for-placement-of-nuclear-stress-in-10-word-turns)</font>
 
 
 ## Documentation
@@ -423,25 +222,21 @@ vignette("Dynamic_Predictions", package = "GLMMadaptive")
 
 <br/>
 
-- Dedicated website: [https://drizopoulos.github.io/GLMMadaptive/](https://drizopoulos.github.io/GLMMadaptive/)
+- Dedicated website: [https://drizopoulos.github.io/cvGEE/](https://drizopoulos.github.io/cvGEE/)
     
 # What the future holds...
 
 ## Future plans
 
-- Implement nested random effects
-    + using **Matrix** sparse matrices classes
+- XXX
 
 <br/>
 
-- More options for the covariance matrix of the random effects
-    + auto-regressive
-    + compound symmetry
+- XXX
 
 <br/>
 
-- Extra models
-    + Conway-Maxwell-Poisson mixed model
+- XXX
     
 ***
 
@@ -465,6 +260,6 @@ vignette("Dynamic_Predictions", package = "GLMMadaptive")
 </div>
 <div align = "center">
 <div align = "center">
-[https://drizopoulos.github.io/GLMMadaptive_presentations/](https://drizopoulos.github.io/GLMMadaptive_presentations/)
+[https://drizopoulos.github.io/cvGEE_presentations/](https://drizopoulos.github.io/cvGEE_presentations/)
 </div>
 
