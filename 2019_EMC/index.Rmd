@@ -103,7 +103,7 @@ fm3 <- update(fm1, spiders2 ~ year * drug + ns(age, 2) * sex)
 ## Example PBC (cont'd)
 
 ```{r PBC_analysis_QIC, message = FALSE}
-t(sapply(list("independence" = fm1, "exchangeable" = fm2, "ar1" = fm3), QIC))
+t(sapply(list("additive" = fm1, "interaction_I" = fm2, "interaction_II" = fm3), QIC))
 ```
 
 ## Example AIDS (cont'd)

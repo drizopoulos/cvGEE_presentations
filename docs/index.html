@@ -208,12 +208,12 @@ fm3 &lt;- update(fm1, spiders2 ~ year * drug + ns(age, 2) * sex)</pre>
 
 </article></slide><slide class=""><hgroup><h2>Example PBC (cont’d)</h2></hgroup><article  id="example-pbc-contd">
 
-<pre class = 'prettyprint lang-r'>t(sapply(list(&quot;independence&quot; = fm1, &quot;exchangeable&quot; = fm2, &quot;ar1&quot; = fm3), QIC))</pre>
+<pre class = 'prettyprint lang-r'>t(sapply(list(&quot;additive&quot; = fm1, &quot;interaction_I&quot; = fm2, &quot;interaction_II&quot; = fm3), QIC))</pre>
 
-<pre >##                   QIC     QICu Quasi Lik      CIC params     QICC
-## independence 2351.127 2320.501 -1155.250 20.31314      5 2351.159
-## exchangeable 2324.990 2293.067 -1140.534 21.96152      6 2325.035
-## ar1          2333.438 2292.107 -1137.053 29.66580      9 2333.534</pre>
+<pre >##                     QIC     QICu Quasi Lik      CIC params     QICC
+## additive       2351.127 2320.501 -1155.250 20.31314      5 2351.159
+## interaction_I  2324.990 2293.067 -1140.534 21.96152      6 2325.035
+## interaction_II 2333.438 2292.107 -1137.053 29.66580      9 2333.534</pre>
 
 </article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd-3">
 
