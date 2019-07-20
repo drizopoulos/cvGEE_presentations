@@ -1,5 +1,5 @@
 ---
-title: "cvGEE:<br/>Cross-Validated Scoring Rules for GEE"
+title: "cvGEE: Cross-Validated Predictions for GEE"
 author: "Dimitris Rizopoulos"
 date: "????"
 output:
@@ -27,192 +27,104 @@ data("toenail", package = "HSAUR2")
 
 # Motivation
 
-## Mixed models
+## Grouped Categorical Data
 
 <br/>
 
-- Mixed effects models have numerous applications
-    + Longitudinal data
-    + Clustered data
-    + Multilevel data
+- Often interest in cluster non-Gaussian data
+    + dichotomous/binomial
+    + counts
+    + ordinal
     + ...
 
-## The basic idea
+## Challenges
 
 <br/>
 
-- We have a grouped outcome ${\color{blue} Y}$
-    + measurements in the same group(s) are correlated
+- For normal data we have the multivariate version of the normal distribution
+  + marginal models
+  + mixed effects models
 
-<br/>
+## Example AIDS
 
-- Correlations are modeled via random effects ${\color{red} b}$
-    + measurements in the same group share the same random effect
+```{r AIDS_analysis_models, message = FALSE}
+aids$CD4count <- aids$CD4 * aids$CD4
+aids$obstimef <- factor(aids$obstime)
 
-## Mathematical definition - 1
+fm1 <- geeglm(CD4count ~ obstimef * drug, family = poisson(), data = aids, 
+              id = patient, corstr = "independence")
 
-- A general definition of mixed models:
-$$
-\left \{
-\begin{array}{ccl}
-{\color{blue} Y} \mid {\color{red} b} & \sim & \mathcal F(\theta_y)\\&&\\
-{\color{red} b} & \sim & \mathcal N(0, D)\\
-\end{array}
-\right.
-$$
-<br/>
-    + the distribution $\mathcal F$ depends on the outcome
-    + the random effects most often are assumed normally distributed
-    + $\theta = (\theta_y^\top, \mbox{vech}(D)^\top)^\top$ are the model parameters
+fm2 <- update(fm1, corstr = "exchangeable")
 
-## Mathematical definition - 2
+fm3 <- update(fm1, corstr = "ar1")
+```
 
-- To estimate mixed models under maximum likelihood we need
-the marginal log-likelihood function
-$$
-\ell(\theta) = \sum_{i = 1}^n \log \int p(y_i \mid b_i; \theta) \, p(b_i; \theta) \; db_i
-$$ 
-<div style = "padding:120px">
-<font color = "red">To estimate mixed models we need to solve the integral</font>
-</div>
+## Example AIDS (cont'd)
 
-## Normal vs the rest - 1
+```{r AIDS_analysis_QIC, message = FALSE}
+t(sapply(list("independence" = fm1, "exchangeable" = fm2, "ar1" = fm3), QIC))
+```
 
-- The random effects $b$ are assumed to have a (multivariate) normal distribution
-<br/><br/>
-- When 
-    + the outcome $Y$ also has a normal distribution,
-    + the random effects enter linearly in the linear predictor
+## Example AIDS (cont'd)
 
-<div style = "padding:33px">
-<font color = "black">the integral can be solved</font> <font color = "purple">*analytically*</font>
-<br/><br/>
-${\color{blue} \Rightarrow}$ <font color = "blue">Easy to program</font> 
-${\color{blue} \Rightarrow}$ <font color = "blue">Stable algorithms available in most software</font>
-</div>
+```{r AIDS_analysis_cvGEE, message = FALSE}
+plot_data <- cv_gee(fm1, return_data = TRUE, max_count = 1000)
+plot_data$independence <- plot_data$.score
 
-## Normal vs the rest - 2
+plot_data$exchangeable <- unlist(cv_gee(fm2, max_count = 1000))
 
-<br/>
+plot_data$ar1 <- unlist(cv_gee(fm3, max_count = 1000))
+```
 
-- However, in all other cases these integrals cannot be solved analytically
+## Example AIDS (cont'd)
 
-<br/>
+```{r AIDS_analysis_plot, message = FALSE, echo = FALSE}
+xyplot(independence + exchangeable + ar1 ~ obstime | .rule, 
+       data = plot_data, type = c("p", "smooth"), auto.key = TRUE, 
+       layout = c(3, 1), xlab = "Follow-up time (months)", ylab = "Scoring Rules",
+       scales = list(y = list(relation = "free")), pch = ".", lwd = 2)
 
-<div style = "padding:50px">
-${\color{red} \Rightarrow}$ <font color = "red">Much more difficult to program</font>
-<br/><br/> 
-${\color{red} \Rightarrow}$ <font color = "black">Several solutions available in software,</font> 
-<font color = "red">**however, many not optimal!!**</font>
-</div>
-
-# Estimation
-
-## How to solve the integrals
-
-- Two general solutions
-
-<br/>
-
-1. Approximation of the integrand
-    + make it look like a normal for which we know the solution
-    <br/><br/>
-2. Approximation of the integral
-    + finite sum over a grid
+```
 
 
-## Popular available options
+## Example PBC
 
-- Approximation of the integrand
-    + Penalized Quasi Likelihood
-    + Laplace approximation
-    
-<br/>
-
-- Approximation of the integral
-    + adaptive Gaussian quadrature
-    + Monte Carlo (rejection & importance sampling)
-
-## Which to choose
-
-- Penalized Quasi Likelihood: generally not good
-
-<br/>
-
-- Laplace: needs many repeated measurements per subject
-    + it does not work well with binary data and Poisson with low counts
-
-<br/>
-
-- Adaptive Gaussian quadrature: <font color = "magenta">*Gold standard*</font>
-    + computationally intensive
-
-<br/>
-
-- Monte Carlo: requires fine tuning
-    + no clear winner algorithm
-    
-# What is available in R
-
-
-## Does it matter? - 1
-
-- The Toenail dataset `data("toenail", package = "HSAUR2")`
-    + mixed effects logistic regression
-    + PQL vs Laplace vs adaptive Gaussian quadrature
-
-```{r toenail_analysis, message = FALSE}
+```{r PBC_analysis_models, message = FALSE}
 pbc2$spiders2 <- as.numeric(pbc2$spiders == "Yes")
 fm1 <- geeglm(spiders2 ~ year + drug + age + sex,
               family = binomial(), data = pbc2, id = id, 
               corstr = "independence")
 
-fm2 <- geeglm(spiders2 ~ year + drug + age * sex,
-              family = binomial(), data = pbc2, id = id, 
-              corstr = "independence")
+fm2 <- update(fm1, formula = spiders2 ~ year + drug + age * sex)
 
-fm3 <- geeglm(spiders2 ~ year + drug + age * sex,
-              family = binomial(), data = pbc2, id = id, 
-              corstr = "independence")
+fm3 <- update(fm1, spiders2 ~ year * drug + ns(age, 2) * sex)
 ```
 
-## Mixed model packages in R - 2
+## Example PBC (cont'd)
 
-<br/>
-<br/>
-
-<div style="float: center; text-align: center; width: 750px; border: 3px solid black">
-<br/><br/>
-<strong><font size="6" color = "red">Need for adaptive Gaussian quadrature for ${\color{red} > 1}$ random effects</font></strong>
-<br/><br/>
-</div>
-
-## A new package
-
-<br/>
-
-- **GLMMadaptive** has been written to fill this gap
-
-<br/>
-
-- Principles
-    + User-friendly
-    + Satisfy the needs of most users
-    + Give advanced users the option to extend it
-    + Well documented
-    
-# What GLMMadaptive offers
-
-```r
-mixed_model(fixed = y ~ time * group, random = ~ time | id, data = DF,
-            family = binomial(), nAGQ = 15)
+```{r PBC_analysis_QIC, message = FALSE}
+t(sapply(list("independence" = fm1, "exchangeable" = fm2, "ar1" = fm3), QIC))
 ```
 
-```r
-vignette("GLMMadaptive_basics", package = "GLMMadaptive")
+## Example AIDS (cont'd)
+
+```{r PBC_analysis_cvGEE, message = FALSE}
+plot_data <- cv_gee(fm1, return_data = TRUE)
+plot_data$additive <- plot_data$.score
+
+plot_data$interaction_I <- unlist(cv_gee(fm2))
+
+plot_data$interaction_II <- unlist(cv_gee(fm3))
 ```
 
+## Example PBC (cont'd)
 
+```{r PBC_analysis_plot, message = FALSE, echo = FALSE}
+xyplot(additive + interaction_I + interaction_II ~ year | .rule, data = plot_data, 
+       type = c("p", "smooth"), auto.key = TRUE, pch = ".", lwd = 3,
+       scales = list(y = list(relation = "free")), layout = c(3, 1),
+       xlab = "Follow-up time (years)", ylab = "Scoring Rules")
+```
 
 ## Documentation
 
