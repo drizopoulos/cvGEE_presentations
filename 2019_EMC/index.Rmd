@@ -1,7 +1,7 @@
 ---
 title: "cvGEE: Cross-Validated Predictions for GEE"
 author: "Dimitris Rizopoulos"
-date: "????"
+date: "January 29, 2020"
 output:
   ioslides_presentation:
     css: pres.css
@@ -31,100 +31,100 @@ data("toenail", package = "HSAUR2")
 
 <br/>
 
-- Often interest in cluster non-Gaussian data
+- Often interest in grouped non-Gaussian data
     + dichotomous/binomial
     + counts
     + ordinal
     + ...
 
-## Challenges
+## Grouped Categorical Data (cont'd)
+
+- For normal data we have the multivariate version of the normal distribution
+  + equivalance between marginal & mixed effects models
 
 <br/>
 
-- For normal data we have the multivariate version of the normal distribution
-  + marginal models
-  + mixed effects models
+- For categorical data
+  + important differences between marginal and mixed models
 
-## Example AIDS
+## Grouped Categorical Data (cont'd)
 
-```{r AIDS_analysis_models, message = FALSE}
-aids$CD4count <- aids$CD4 * aids$CD4
-aids$obstimef <- factor(aids$obstime)
+- We focus on marginal models
+  + proposals of multivariate distributions for categorical data (e.g., Dale, copulas, etc.)
+  + difficult to fit
 
-fm1 <- geeglm(CD4count ~ obstimef * drug, family = poisson(), data = aids, 
-              id = patient, corstr = "independence")
+<br/>
+  
+- Liang and Zeger have come in the rescue
+  
+<div style="text-align:center;width:700px;border:3px solid black">
+<br/>
+<font color = "red" size = "6">Genaralized Estimating Equations (GEEs)</font>
+<br/>
+</div>
 
-fm2 <- update(fm1, corstr = "exchangeable")
+## GEEs
 
-fm3 <- update(fm1, corstr = "ar1")
-```
+- GEEs have seen considerable development the last 20-30 year
+  + causal inference
+  + survival analysis
+  + ...
 
-## Example AIDS (cont'd)
+## GEEs (cont'd)
 
-```{r AIDS_analysis_QIC, message = FALSE}
-t(sapply(list("independence" = fm1, "exchangeable" = fm2, "ar1" = fm3), QIC))
-```
+- Let $Y_i$ denote a multivariate outcome with marginal mean $$\mu_i = g(X_i^\top \beta)$$
 
-## Example AIDS (cont'd)
+<br/>
 
-```{r AIDS_analysis_cvGEE, message = FALSE}
-plot_data <- cv_gee(fm1, return_data = TRUE, max_count = 1000)
-plot_data$independence <- plot_data$.score
+- Estimates for $\beta$ are obtained by solving the equations
+$$S(\beta) = \sum_i \frac{\partial \mu_i}{\partial \beta } \; {\color{red} V_i^{-1}} \; (Y_i - \mu_i) = 0$$
 
-plot_data$exchangeable <- unlist(cv_gee(fm2, max_count = 1000))
+## GEEs (cont'd)
 
-plot_data$ar1 <- unlist(cv_gee(fm3, max_count = 1000))
-```
+- The trick is in the definition of ${\color{red} V_i^{-1}}$
+$${\color{red} V_i^{-1}} = A_i^{1/2} \; R_i(\alpha) \; A_i^{1/2}$$
+where
+  + $A_i= \mbox{diag}\{\mbox{var}(Y_i)^{1/2}\}$ a diagonal matrix with standard deviations
+  + $R_i(\alpha)$ a *working* assumption for the pairwise correlations
 
-## Example AIDS (cont'd)
+## GEEs (cont'd)
 
-```{r AIDS_analysis_plot, message = FALSE, echo = FALSE}
-xyplot(independence + exchangeable + ar1 ~ obstime | .rule, 
-       data = plot_data, type = c("p", "smooth"), auto.key = TRUE, 
-       layout = c(3, 1), xlab = "Follow-up time (months)", ylab = "Scoring Rules",
-       scales = list(y = list(relation = "free")), pch = ".", lwd = 2)
+- If the assumed mean structure $\mu_i$ is correctly specified, then $$\widehat{\beta} \sim \mathcal N \{ \mathbf{\beta}, \mbox{var}(\widehat{\beta})\}$$
+where $$\mbox{var}(\widehat{\beta}) = V_0^{-1} V_1 V_0^{-1}$$ 
+with 
+  + $V_0 = \sum_{i} \frac{\partial \mu_i}{\partial \beta^\top} V_i^{-1} \frac{\partial \mu_i}{\partial\beta}$
+  + $V_1 = \sum_{i} \frac{\partial \mu_i}{\partial \beta^\top} V_i^{-1} \mbox{var}(Y_i) V_i^{-1} \frac{\partial\mu_i}{\partial \beta}$
 
-```
+## GEEs (cont'd)
 
+- For a dichotomous outcome
+  + the mean is $$\mu_i = \pi_i = \frac{\exp(X_i^\top \beta)}{1 + \exp(X_i^\top \beta)}$$
+  + the variance accounts for over-dispersion using the quasi-likelihood formulation
+  $$\mbox{var}(Y_i) = {\color{red} \phi} \pi_i (1 - \pi_i)$$
 
-## Example PBC
+## Predictions from GEEs
 
-```{r PBC_analysis_models, message = FALSE}
-pbc2$spiders2 <- as.numeric(pbc2$spiders == "Yes")
-fm1 <- geeglm(spiders2 ~ year + drug + age + sex,
-              family = binomial(), data = pbc2, id = id, 
-              corstr = "independence")
+- A CPO project in which we fitted a GEE for count data
 
-fm2 <- update(fm1, formula = spiders2 ~ year + drug + age * sex)
+<br/>
 
-fm3 <- update(fm1, spiders2 ~ year * drug + ns(age, 2) * sex)
-```
+- Two questions
+  + Estimate $\beta$ and report results
+  + calculate and <font color="red">*validate*</font> predictions
 
-## Example PBC (cont'd)
+## Predictions from GEEs (cont'd)
 
-```{r PBC_analysis_QIC, message = FALSE}
-t(sapply(list("additive" = fm1, "interaction_I" = fm2, "interaction_II" = fm3), QIC))
-```
+- Predictions from a GEE are simply $$\widehat{\mu}_{ij} = g(X_{ij} \widehat{\beta})$$
 
-## Example PBC (cont'd)
+<br/>
 
-```{r PBC_analysis_cvGEE, message = FALSE}
-plot_data <- cv_gee(fm1, return_data = TRUE)
-plot_data$additive <- plot_data$.score
+- But how to <font color="red">*properly*</font> validate these predictions?
 
-plot_data$interaction_I <- unlist(cv_gee(fm2))
+## Predictions from GEEs (cont'd)
 
-plot_data$interaction_II <- unlist(cv_gee(fm3))
-```
+- We could do simple prediction error $$\sum_i\sum_j (Y_{ij} - \widehat{\mu}_{ij})^2$$
 
-## Example PBC (cont'd)
-
-```{r PBC_analysis_plot, message = FALSE, echo = FALSE}
-xyplot(additive + interaction_I + interaction_II ~ year | .rule, data = plot_data, 
-       type = c("p", "smooth"), auto.key = TRUE, pch = ".", lwd = 3,
-       scales = list(y = list(relation = "free")), layout = c(3, 1),
-       xlab = "Follow-up time (years)", ylab = "Scoring Rules")
-```
+- But this is not proper for count data
 
 ## Documentation
 

@@ -9,6 +9,7 @@
 
 
 
+  <meta name="date" content="2020-01-29" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -123,7 +124,7 @@ slide:not(.current) .plotly.html-widget{
       <h1 data-config-title><!-- populated from slide_config.json --></h1>
       <h2 data-config-subtitle><!-- populated from slide_config.json --></h2>
       <p data-config-presenter><!-- populated from slide_config.json --></p>
-            <p style="margin-top: 6px; margin-left: -2px;">????</p>
+            <p style="margin-top: 6px; margin-left: -2px;">January 29, 2020</p>
           </hgroup>
   </slide>
 
@@ -138,7 +139,7 @@ slide:not(.current) .plotly.html-widget{
 <p><br/></p>
 
 <ul>
-<li>Often interest in cluster non-Gaussian data
+<li>Often interest in grouped non-Gaussian data
 
 <ul>
 <li>dichotomous/binomial</li>
@@ -148,85 +149,138 @@ slide:not(.current) .plotly.html-widget{
 </ul></li>
 </ul>
 
-</article></slide><slide class=""><hgroup><h2>Challenges</h2></hgroup><article  id="challenges">
-
-<p><br/></p>
+</article></slide><slide class=""><hgroup><h2>Grouped Categorical Data (cont’d)</h2></hgroup><article  id="grouped-categorical-data-contd">
 
 <ul>
 <li>For normal data we have the multivariate version of the normal distribution
 
 <ul>
-<li>marginal models</li>
-<li>mixed effects models</li>
+<li>equivalance between marginal &amp; mixed effects models</li>
 </ul></li>
 </ul>
 
-</article></slide><slide class=""><hgroup><h2>Example AIDS</h2></hgroup><article  id="example-aids">
+<p><br/></p>
 
-<pre class = 'prettyprint lang-r'>aids$CD4count &lt;- aids$CD4 * aids$CD4
-aids$obstimef &lt;- factor(aids$obstime)
+<ul>
+<li>For categorical data
 
-fm1 &lt;- geeglm(CD4count ~ obstimef * drug, family = poisson(), data = aids, 
-              id = patient, corstr = &quot;independence&quot;)
+<ul>
+<li>important differences between marginal and mixed models</li>
+</ul></li>
+</ul>
 
-fm2 &lt;- update(fm1, corstr = &quot;exchangeable&quot;)
+</article></slide><slide class=""><hgroup><h2>Grouped Categorical Data (cont’d)</h2></hgroup><article  id="grouped-categorical-data-contd-1">
 
-fm3 &lt;- update(fm1, corstr = &quot;ar1&quot;)</pre>
+<ul>
+<li>We focus on marginal models
 
-</article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd">
+<ul>
+<li>proposals of multivariate distributions for categorical data (e.g., Dale, copulas, etc.)</li>
+<li>difficult to fit</li>
+</ul></li>
+</ul>
 
-<pre class = 'prettyprint lang-r'>t(sapply(list(&quot;independence&quot; = fm1, &quot;exchangeable&quot; = fm2, &quot;ar1&quot; = fm3), QIC))</pre>
+<p><br/></p>
 
-<pre >##                    QIC      QICu Quasi Lik       CIC params      QICC
-## independence -687019.3 -687019.1  343519.5  9.896028     10 -687019.1
-## exchangeable -684214.1 -684234.0  342127.0 19.984129     10 -684213.9
-## ar1          -684088.4 -684122.2  342071.1 26.908066     10 -684088.2</pre>
+<ul>
+<li>Liang and Zeger have come in the rescue</li>
+</ul>
 
-</article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd-1">
+<div style="text-align:center;width:700px;border:3px solid black">
+<p><br/> <font color = "red" size = "6">Genaralized Estimating Equations (GEEs)</font> <br/></p></div>
 
-<pre class = 'prettyprint lang-r'>plot_data &lt;- cv_gee(fm1, return_data = TRUE, max_count = 1000)
-plot_data$independence &lt;- plot_data$.score
+</article></slide><slide class=""><hgroup><h2>GEEs</h2></hgroup><article  id="gees">
 
-plot_data$exchangeable &lt;- unlist(cv_gee(fm2, max_count = 1000))
+<ul>
+<li>GEEs have seen considerable development the last 20-30 year
 
-plot_data$ar1 &lt;- unlist(cv_gee(fm3, max_count = 1000))</pre>
+<ul>
+<li>causal inference</li>
+<li>survival analysis</li>
+<li>…</li>
+</ul></li>
+</ul>
 
-</article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd-2">
+</article></slide><slide class=""><hgroup><h2>GEEs (cont’d)</h2></hgroup><article  id="gees-contd">
 
-<p><img src="index_files/figure-html/AIDS_analysis_plot-1.png" width="720" /></p>
+<ul>
+<li>Let \(Y_i\) denote a multivariate outcome with marginal mean \[\mu_i = g(X_i^\top \beta)\]</li>
+</ul>
 
-</article></slide><slide class=""><hgroup><h2>Example PBC</h2></hgroup><article  id="example-pbc">
+<p><br/></p>
 
-<pre class = 'prettyprint lang-r'>pbc2$spiders2 &lt;- as.numeric(pbc2$spiders == &quot;Yes&quot;)
-fm1 &lt;- geeglm(spiders2 ~ year + drug + age + sex,
-              family = binomial(), data = pbc2, id = id, 
-              corstr = &quot;independence&quot;)
+<ul>
+<li>Estimates for \(\beta\) are obtained by solving the equations \[S(\beta) = \sum_i \frac{\partial \mu_i}{\partial \beta } \; {\color{red} V_i^{-1}} \; (Y_i - \mu_i) = 0\]</li>
+</ul>
 
-fm2 &lt;- update(fm1, formula = spiders2 ~ year + drug + age * sex)
+</article></slide><slide class=""><hgroup><h2>GEEs (cont’d)</h2></hgroup><article  id="gees-contd-1">
 
-fm3 &lt;- update(fm1, spiders2 ~ year * drug + ns(age, 2) * sex)</pre>
+<ul>
+<li>The trick is in the definition of \({\color{red} V_i^{-1}}\) \[{\color{red} V_i^{-1}} = A_i^{1/2} \; R_i(\alpha) \; A_i^{1/2}\] where
 
-</article></slide><slide class=""><hgroup><h2>Example PBC (cont’d)</h2></hgroup><article  id="example-pbc-contd">
+<ul>
+<li>\(A_i= \mbox{diag}\{\mbox{var}(Y_i)^{1/2}\}\) a diagonal matrix with standard deviations</li>
+<li>\(R_i(\alpha)\) a <em>working</em> assumption for the pairwise correlations</li>
+</ul></li>
+</ul>
 
-<pre class = 'prettyprint lang-r'>t(sapply(list(&quot;additive&quot; = fm1, &quot;interaction_I&quot; = fm2, &quot;interaction_II&quot; = fm3), QIC))</pre>
+</article></slide><slide class=""><hgroup><h2>GEEs (cont’d)</h2></hgroup><article  id="gees-contd-2">
 
-<pre >##                     QIC     QICu Quasi Lik      CIC params     QICC
-## additive       2351.127 2320.501 -1155.250 20.31314      5 2351.159
-## interaction_I  2324.990 2293.067 -1140.534 21.96152      6 2325.035
-## interaction_II 2333.438 2292.107 -1137.053 29.66580      9 2333.534</pre>
+<ul>
+<li>If the assumed mean structure \(\mu_i\) is correctly specified, then \[\widehat{\beta} \sim \mathcal N \{ \mathbf{\beta}, \mbox{var}(\widehat{\beta})\}\] where \[\mbox{var}(\widehat{\beta}) = V_0^{-1} V_1 V_0^{-1}\] with
 
-</article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd-3">
+<ul>
+<li>\(V_0 = \sum_{i} \frac{\partial \mu_i}{\partial \beta^\top} V_i^{-1} \frac{\partial \mu_i}{\partial\beta}\)</li>
+<li>\(V_1 = \sum_{i} \frac{\partial \mu_i}{\partial \beta^\top} V_i^{-1} \mbox{var}(Y_i) V_i^{-1} \frac{\partial\mu_i}{\partial \beta}\)</li>
+</ul></li>
+</ul>
 
-<pre class = 'prettyprint lang-r'>plot_data &lt;- cv_gee(fm1, return_data = TRUE)
-plot_data$additive &lt;- plot_data$.score
+</article></slide><slide class=""><hgroup><h2>GEEs (cont’d)</h2></hgroup><article  id="gees-contd-3">
 
-plot_data$interaction_I &lt;- unlist(cv_gee(fm2))
+<ul>
+<li>For a dichotomous outcome
 
-plot_data$interaction_II &lt;- unlist(cv_gee(fm3))</pre>
+<ul>
+<li>the mean is \[\mu_i = \pi_i = \frac{\exp(X_i^\top \beta)}{1 + \exp(X_i^\top \beta)}\]</li>
+<li>the variance accounts for over-dispersion using the quasi-likelihood formulation \[\mbox{var}(Y_i) = {\color{red} \phi} \pi_i (1 - \pi_i)\]</li>
+</ul></li>
+</ul>
 
-</article></slide><slide class=""><hgroup><h2>Example PBC (cont’d)</h2></hgroup><article  id="example-pbc-contd-1">
+</article></slide><slide class=""><hgroup><h2>Predictions from GEEs</h2></hgroup><article  id="predictions-from-gees">
 
-<p><img src="index_files/figure-html/PBC_analysis_plot-1.png" width="720" /></p>
+<ul>
+<li>A CPO project in which we fitted a GEE for count data</li>
+</ul>
+
+<p><br/></p>
+
+<ul>
+<li>Two questions
+
+<ul>
+<li>Estimate \(\beta\) and report results</li>
+<li>calculate and <font color="red"><em>validate</em></font> predictions</li>
+</ul></li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Predictions from GEEs (cont’d)</h2></hgroup><article  id="predictions-from-gees-contd">
+
+<ul>
+<li>Predictions from a GEE are simply \[\widehat{\mu}_{ij} = g(X_{ij} \widehat{\beta})\]</li>
+</ul>
+
+<p><br/></p>
+
+<ul>
+<li>But how to <font color="red"><em>properly</em></font> validate these predictions?</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Predictions from GEEs (cont’d)</h2></hgroup><article  id="predictions-from-gees-contd-1">
+
+<ul>
+<li><p>We could do simple prediction error \[\sum_i\sum_j (Y_{ij} - \widehat{\mu}_{ij})^2\]</p></li>
+<li><p>But this is not proper for count data</p></li>
+</ul>
 
 </article></slide><slide class=""><hgroup><h2>Documentation</h2></hgroup><article  id="documentation">
 
