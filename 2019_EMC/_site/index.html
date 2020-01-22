@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>cvGEE: Cross-Validated Predictions for GEE</title>
+  <title>Validating Predictions from GEEs</title>
 
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="chrome=1">
@@ -20,7 +20,7 @@
     var SLIDE_CONFIG = {
       // Slide settings
       settings: {
-                title: 'cvGEE: Cross-Validated Predictions for GEE',
+                title: 'Validating Predictions from GEEs',
                         useBuilds: true,
         usePrettify: true,
         enableSlideAreas: true,
@@ -175,15 +175,15 @@ slide:not(.current) .plotly.html-widget{
 <li>We focus on marginal models
 
 <ul>
-<li>proposals of multivariate distributions for categorical data (e.g., Dale, copulas, etc.)</li>
-<li>difficult to fit</li>
+<li>multivariate distributions for categorical data (e.g., Dale, copulas, etc.)</li>
+<li><font color="red"><em>difficult to fit</em></font></li>
 </ul></li>
 </ul>
 
 <p><br/></p>
 
 <ul>
-<li>Liang and Zeger have come in the rescue</li>
+<li>Liang and Zeger have come to the rescue</li>
 </ul>
 
 <div style="text-align:center;width:700px;border:3px solid black">
@@ -191,12 +191,15 @@ slide:not(.current) .plotly.html-widget{
 
 </article></slide><slide class=""><hgroup><h2>GEEs</h2></hgroup><article  id="gees">
 
+<p><br/></p>
+
 <ul>
 <li>GEEs have seen considerable development the last 20-30 year
 
 <ul>
+<li>missing data</li>
 <li>causal inference</li>
-<li>survival analysis</li>
+<li>measurement error</li>
 <li>…</li>
 </ul></li>
 </ul>
@@ -236,6 +239,8 @@ slide:not(.current) .plotly.html-widget{
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>GEEs (cont’d)</h2></hgroup><article  id="gees-contd-3">
+
+<p><br/></p>
 
 <ul>
 <li>For a dichotomous outcome
@@ -278,16 +283,160 @@ slide:not(.current) .plotly.html-widget{
 </article></slide><slide class=""><hgroup><h2>Predictions from GEEs (cont’d)</h2></hgroup><article  id="predictions-from-gees-contd-1">
 
 <ul>
-<li><p>We could do simple prediction error \[\sum_i\sum_j (Y_{ij} - \widehat{\mu}_{ij})^2\]</p></li>
-<li><p>But this is not proper for count data</p></li>
+<li>We could calculate the prediction error \[\sum_i\sum_j (Y_{ij} - \widehat{\mu}_{ij})^2\]</li>
 </ul>
-
-</article></slide><slide class=""><hgroup><h2>Documentation</h2></hgroup><article  id="documentation">
 
 <p><br/></p>
 
 <ul>
-<li>Up-to-date help files</li>
+<li>But this is not proper for count data
+
+<ul>
+<li>XXX</li>
+</ul></li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules</h2></hgroup><article  id="proper-scoring-rules">
+
+<ul>
+<li>Let \(Y_{ij} \in \{1, \ldots, K\}\) a categorical outcome
+
+<ul>
+<li>\(K\) finite (e.g., binary data)</li>
+<li>\(K\) infinite (e.g., count data)</li>
+</ul></li>
+</ul>
+
+<p><br/></p>
+
+<ul>
+<li>Let also \(\pi_{ijk} = \Pr(Y_{ij} = k)\), \(k = 1, \ldots, K\)</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules (cont’d)</h2></hgroup><article  id="proper-scoring-rules-contd">
+
+<ul>
+<li>A scoring rule \[R(\pi_{ij}, \{Y_{ij} = k\})\] a function that assigns a score for the forecast \(\{\pi_{ijk}; k = 1, \ldots, K\}\) upon observing the outcome \(\{Y_{ij} = k\}\)</li>
+</ul>
+
+<p><br/></p>
+
+<ul>
+<li>Based on observing \(Y_{ij}\), we get probabilities for all \(K\) categories</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules (cont’d)</h2></hgroup><article  id="proper-scoring-rules-contd-1">
+
+<p><br/></p>
+
+<div style="float:center;text-align:center;width:80%;border:3px solid black">
+<p><br/><br/> <strong><font size="6" color = "red">A proper scoring rule is a rule that is maximized when the true probabilities are used in its calculation</font></strong> <br/><br/></p></div>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules (cont’d)</h2></hgroup><article  id="proper-scoring-rules-contd-2">
+
+<ul>
+<li><p>The most well-known proper scoring rules</p>
+
+<ul>
+<li>Logarithmic: \[R(\pi_{ij}, \{Y_{ij} = k\}) = \log(\pi_{ijk}), \quad (-\infty, 0]\]</li>
+</ul>
+
+<p><br/></p>
+
+<ul>
+<li>Quadratic: \[R(\pi_{ij}, \{Y_{ij} = k\}) = 2\pi_{ijk} - \sum_{\ell = 1}^K \pi_{ij\ell}^2, \quad [-1, 1]\]</li>
+</ul></li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules (cont’d)</h2></hgroup><article  id="proper-scoring-rules-contd-3">
+
+<ul>
+<li>The most well-known proper scoring rules
+
+<ul>
+<li>Spherical: \[R(\pi_{ij}, \{Y_{ij} = k\}) = \pi_{ijk} \Bigg / \sqrt{\sum_{\ell = 1}^K \pi_{ij\ell}^2}, \quad [0, 1]\]</li>
+</ul></li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules (cont’d)</h2></hgroup><article  id="proper-scoring-rules-contd-4">
+
+<ul>
+<li>However, in GEEs no specification of the distribution of the data
+
+<ul>
+<li>we only define the first two moments</li>
+</ul></li>
+</ul>
+
+<p><br/></p>
+
+<div style="float:center;text-align:center;width:80%;border:3px solid black">
+<p><br/><br/> <strong><font size="6" color = "red">We do not get a probability mass function</font></strong> <br/><br/></p></div>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules (cont’d)</h2></hgroup><article  id="proper-scoring-rules-contd-5">
+
+<ul>
+<li><p>We make the following conventions</p>
+
+<ul>
+<li>For binary data we use the Bernoulli distribution</li>
+</ul>
+
+<p><br/></p>
+
+<ul>
+<li>For binomial data we use the Beta-Binomial distribution
+
+<ul>
+<li>quasi-likelihood \(\mbox{var}(Y_{ij}) = \phi K \pi_{ijk} (1 - \pi_{ijk})\)</li>
+<li>scale \(\theta\) of Beta-Binomial is set to \[(K - \phi) / (\phi - 1)\]</li>
+</ul></li>
+</ul></li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Proper Scoring Rules (cont’d)</h2></hgroup><article  id="proper-scoring-rules-contd-6">
+
+<p><br/></p>
+
+<ul>
+<li>We make the following conventions
+
+<ul>
+<li>For count data we use the Negative Binomial distribution
+
+<ul>
+<li>quasi-likelihood \(\mbox{var}(Y_{ij}) = \phi \mu_{ij}\)</li>
+<li>shape \(\theta\) of Negative Binomial is set to \[\mu_{ij} / (\phi - 1)\]</li>
+</ul></li>
+</ul></li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Implementation</h2></hgroup><article  id="implementation">
+
+<p><br/></p>
+
+<div style="float:center;text-align:center;width:60%;border:3px solid black">
+<p><br/><br/> <strong><font size="6" color = "red">R Package cvGEE</font></strong> <br/><br/></p></div>
+
+<p><br/></p>
+
+<ul>
+<li>Calculation of proper scoring rules using cross-validation is implemented in</li>
+</ul>
+
+</article></slide><slide class=""><hgroup><h2>Implementation (cont’d)</h2></hgroup><article  id="implementation-contd">
+
+<ul>
+<li>Basic function <code>cv_gee()</code> with arguments
+
+<ul>
+<li><code>object</code> a model object from <strong>geepack</strong></li>
+<li><code>rule</code> which scoring rule to calculate</li>
+<li><code>K</code> number of folds in CV</li>
+<li><code>M</code> how many times to repeat CV</li>
+<li><code>seed</code> the seed used in the calculation</li>
+<li><code>return_data</code> return results in a data frame</li>
+</ul></li>
 </ul>
 
 <p><br/></p>

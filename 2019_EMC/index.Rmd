@@ -1,5 +1,5 @@
 ---
-title: "cvGEE: Cross-Validated Predictions for GEE"
+title: "Validating Predictions from GEEs"
 author: "Dimitris Rizopoulos"
 date: "January 29, 2020"
 output:
@@ -50,12 +50,12 @@ data("toenail", package = "HSAUR2")
 ## Grouped Categorical Data (cont'd)
 
 - We focus on marginal models
-  + proposals of multivariate distributions for categorical data (e.g., Dale, copulas, etc.)
-  + difficult to fit
+  + multivariate distributions for categorical data (e.g., Dale, copulas, etc.)
+  + <font color="red">*difficult to fit*</font>
 
 <br/>
   
-- Liang and Zeger have come in the rescue
+- Liang and Zeger have come to the rescue
   
 <div style="text-align:center;width:700px;border:3px solid black">
 <br/>
@@ -65,9 +65,12 @@ data("toenail", package = "HSAUR2")
 
 ## GEEs
 
+<br/>
+
 - GEEs have seen considerable development the last 20-30 year
+  + missing data
   + causal inference
-  + survival analysis
+  + measurement error
   + ...
 
 ## GEEs (cont'd)
@@ -97,6 +100,8 @@ with
 
 ## GEEs (cont'd)
 
+<br/>
+
 - For a dichotomous outcome
   + the mean is $$\mu_i = \pi_i = \frac{\exp(X_i^\top \beta)}{1 + \exp(X_i^\top \beta)}$$
   + the variance accounts for over-dispersion using the quasi-likelihood formulation
@@ -122,15 +127,112 @@ with
 
 ## Predictions from GEEs (cont'd)
 
-- We could do simple prediction error $$\sum_i\sum_j (Y_{ij} - \widehat{\mu}_{ij})^2$$
-
-- But this is not proper for count data
-
-## Documentation
+- We could calculate the prediction error $$\sum_i\sum_j (Y_{ij} - \widehat{\mu}_{ij})^2$$
 
 <br/>
 
-- Up-to-date help files
+- But this is not proper for count data
+  + XXX
+  
+## Proper Scoring Rules
+
+- Let $Y_{ij} \in \{1, \ldots, K\}$ a categorical outcome
+  + $K$ finite (e.g., binary data)
+  + $K$ infinite (e.g., count data)
+  
+<br/>
+
+- Let also $\pi_{ijk} = \Pr(Y_{ij} = k)$, $k = 1, \ldots, K$
+
+## Proper Scoring Rules (cont'd)
+
+- A scoring rule $$R(\pi_{ij}, \{Y_{ij} = k\})$$ a function that assigns a score for the forecast $\{\pi_{ijk}; k = 1, \ldots, K\}$ upon observing the outcome $\{Y_{ij} = k\}$
+
+<br/>
+
+- Based on observing $Y_{ij}$, we get probabilities for all $K$ categories
+
+## Proper Scoring Rules (cont'd)
+
+<br/>
+
+<div style="float:center;text-align:center;width:80%;border:3px solid black">
+<br/><br/>
+<strong><font size="6" color = "red">A proper scoring rule is a rule that is maximized when the true probabilities are used in its calculation</font></strong>
+<br/><br/>
+</div>
+
+## Proper Scoring Rules (cont'd)
+
+- The most well-known proper scoring rules
+  + Logarithmic: $$R(\pi_{ij}, \{Y_{ij} = k\}) = \log(\pi_{ijk}), \quad (-\infty, 0]$$
+  
+  <br/>
+  
+  + Quadratic: $$R(\pi_{ij}, \{Y_{ij} = k\}) = 2\pi_{ijk} - \sum_{\ell = 1}^K \pi_{ij\ell}^2, \quad [-1, 1]$$
+
+## Proper Scoring Rules (cont'd)
+
+- The most well-known proper scoring rules
+  + Spherical: $$R(\pi_{ij}, \{Y_{ij} = k\}) = \pi_{ijk} \Bigg / \sqrt{\sum_{\ell = 1}^K \pi_{ij\ell}^2}, \quad [0, 1]$$
+
+## Proper Scoring Rules (cont'd)
+
+- However, in GEEs no specification of the distribution of the data
+  + we only define the first two moments
+
+<br/>
+
+<div style="float:center;text-align:center;width:80%;border:3px solid black">
+<br/><br/>
+<strong><font size="6" color = "red">We do not get a probability mass function</font></strong>
+<br/><br/>
+</div>
+
+## Proper Scoring Rules (cont'd)
+
+- We make the following conventions
+  + For binary data we use the Bernoulli distribution
+  
+  <br/>
+  
+  + For binomial data we use the Beta-Binomial distribution
+    + quasi-likelihood $\mbox{var}(Y_{ij}) = \phi K \pi_{ijk} (1 - \pi_{ijk})$
+    + scale $\theta$ of Beta-Binomial is set to $$(K - \phi) / (\phi - 1)$$
+
+## Proper Scoring Rules (cont'd)
+
+<br/>
+
+- We make the following conventions
+  + For count data we use the Negative Binomial distribution
+    + quasi-likelihood $\mbox{var}(Y_{ij}) = \phi \mu_{ij}$
+    + shape $\theta$ of Negative Binomial is set to $$\mu_{ij} / (\phi - 1)$$
+
+## Implementation
+
+<br/>
+
+<div style="float:center;text-align:center;width:60%;border:3px solid black">
+<br/><br/>
+<strong><font size="6" color = "red">R Package cvGEE</font></strong>
+<br/><br/>
+</div>
+
+<br/>
+
+- Calculation of proper scoring rules using cross-validation is implemented in
+
+## Implementation (cont'd)
+
+- Basic function `cv_gee()` with arguments
+  + `object` a model object from **geepack**
+  + `rule` which scoring rule to calculate
+  + `K` number of folds in CV
+  + `M` how many times to repeat CV
+  + `seed` the seed used in the calculation
+  + `return_data` return results in a data frame
+
 
 <br/>
 
