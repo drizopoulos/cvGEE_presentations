@@ -42,11 +42,6 @@
     };
   </script>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
-  <script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
-  <script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
-  <script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
   <link href="site_libs/ioslides-13.5.1/fonts/fonts.css" rel="stylesheet" />
   <link href="site_libs/ioslides-13.5.1/theme/css/default.css" rel="stylesheet" />
   <link href="site_libs/ioslides-13.5.1/theme/css/phone.css" rel="stylesheet" />
@@ -122,7 +117,7 @@ slide:not(.current) .plotly.html-widget{
         <!-- The content of this hgroup is replaced programmatically through the slide_config.json. -->
     <hgroup class="auto-fadein">
       <h1 data-config-title><!-- populated from slide_config.json --></h1>
-      <h2 data-config-subtitle><!-- populated from slide_config.json --></h2>
+      
       <p data-config-presenter><!-- populated from slide_config.json --></p>
             <p style="margin-top: 6px; margin-left: -2px;">January 29, 2020</p>
           </hgroup>
@@ -194,7 +189,7 @@ slide:not(.current) .plotly.html-widget{
 <p><br/></p>
 
 <ul>
-<li>GEEs have seen considerable development the last 20-30 year
+<li>GEEs have seen considerable development the last 20-30 years
 
 <ul>
 <li>missing data</li>
@@ -289,10 +284,10 @@ slide:not(.current) .plotly.html-widget{
 <p><br/></p>
 
 <ul>
-<li>But this is not proper for count data
+<li>But this is not a scoring rule
 
 <ul>
-<li>XXX</li>
+<li>we only look at the mean <font color="red"><em>not</em></font> the whole distribution</li>
 </ul></li>
 </ul>
 
@@ -421,7 +416,7 @@ slide:not(.current) .plotly.html-widget{
 <p><br/></p>
 
 <ul>
-<li>Calculation of proper scoring rules using cross-validation is implemented in</li>
+<li>Calculation of proper scoring rules using cross-validation</li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2>Implementation (cont’d)</h2></hgroup><article  id="implementation-contd">
@@ -439,30 +434,92 @@ slide:not(.current) .plotly.html-widget{
 </ul></li>
 </ul>
 
+</article></slide><slide class=""><hgroup><h2>Example AIDS</h2></hgroup><article  id="example-aids">
+
+<pre class = 'prettyprint lang-r'>aids$CD4count &lt;- aids$CD4 * aids$CD4
+aids$obstimef &lt;- factor(aids$obstime)
+
+fm1 &lt;- geeglm(CD4count ~ obstimef * drug, family = poisson(), data = aids, 
+              id = patient, corstr = &quot;independence&quot;)
+
+fm2 &lt;- update(fm1, corstr = &quot;exchangeable&quot;)
+
+fm3 &lt;- update(fm1, corstr = &quot;ar1&quot;)</pre>
+
+</article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd">
+
+<pre class = 'prettyprint lang-r'>t(sapply(list(&quot;independence&quot; = fm1, &quot;exchangeable&quot; = fm2, &quot;ar1&quot; = fm3), QIC))</pre>
+
+<pre >##                    QIC      QICu Quasi Lik       CIC params      QICC
+## independence -687019.3 -687019.1  343519.5  9.896028     10 -687019.1
+## exchangeable -684214.1 -684234.0  342127.0 19.984129     10 -684213.9
+## ar1          -684088.4 -684122.2  342071.1 26.908066     10 -684088.2</pre>
+
+</article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd-1">
+
+<pre class = 'prettyprint lang-r'>plot_data &lt;- cv_gee(fm1, return_data = TRUE, max_count = 1000)
+plot_data$independence &lt;- plot_data$.score
+
+plot_data$exchangeable &lt;- unlist(cv_gee(fm2, max_count = 1000))
+
+plot_data$ar1 &lt;- unlist(cv_gee(fm3, max_count = 1000))</pre>
+
+</article></slide><slide class=""><hgroup><h2>Example AIDS (cont’d)</h2></hgroup><article  id="example-aids-contd-2">
+
+<p><img src="index_files/figure-html/AIDS_analysis_plot-1.png" width="720" /></p>
+
+</article></slide><slide class=""><hgroup><h2>Example PBC</h2></hgroup><article  id="example-pbc">
+
+<pre class = 'prettyprint lang-r'>pbc2$spiders2 &lt;- as.numeric(pbc2$spiders == &quot;Yes&quot;)
+fm1 &lt;- geeglm(spiders2 ~ year + drug + age + sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = &quot;independence&quot;)
+
+fm2 &lt;- update(fm1, formula = spiders2 ~ year + drug + age * sex)
+
+fm3 &lt;- update(fm1, spiders2 ~ year * drug + ns(age, 2) * sex)</pre>
+
+</article></slide><slide class=""><hgroup><h2>Example PBC (cont’d)</h2></hgroup><article  id="example-pbc-contd">
+
+<pre class = 'prettyprint lang-r'>t(sapply(list(&quot;additive&quot; = fm1, &quot;interaction_I&quot; = fm2, &quot;interaction_II&quot; = fm3), QIC))</pre>
+
+<pre >##                     QIC     QICu Quasi Lik      CIC params     QICC
+## additive       2351.127 2320.501 -1155.250 20.31314      5 2351.159
+## interaction_I  2324.990 2293.067 -1140.534 21.96152      6 2325.035
+## interaction_II 2333.438 2292.107 -1137.053 29.66580      9 2333.534</pre>
+
+</article></slide><slide class=""><hgroup><h2>Example PBC (cont’d)</h2></hgroup><article  id="example-pbc-contd-1">
+
+<pre class = 'prettyprint lang-r'>plot_data &lt;- cv_gee(fm1, return_data = TRUE)
+plot_data$additive &lt;- plot_data$.score
+
+plot_data$interaction_I &lt;- unlist(cv_gee(fm2))
+
+plot_data$interaction_II &lt;- unlist(cv_gee(fm3))</pre>
+
+</article></slide><slide class=""><hgroup><h2>Example PBC (cont’d)</h2></hgroup><article  id="example-pbc-contd-2">
+
+<p><img src="index_files/figure-html/PBC_analysis_plot-1.png" width="720" /></p>
+
+</article></slide><slide class=""><hgroup><h2>Discussion</h2></hgroup><article  id="discussion">
+
+<ul>
+<li>Should we look at the mean or whole distribution?
+
+<ul>
+<li>former inline with GEE specification</li>
+<li>latter gives a more complete picture</li>
+</ul></li>
+</ul>
+
 <p><br/></p>
+
+<ul>
+<li>cvGEE
 
 <ul>
 <li>Dedicated website: <a href='https://drizopoulos.github.io/cvGEE/' title=''>https://drizopoulos.github.io/cvGEE/</a></li>
-</ul>
-
-</article></slide><slide class="segue dark nobackground level1"><hgroup class = 'auto-fadein'><h2>What the future holds…</h2></hgroup><article  id="what-the-future-holds">
-
-</article></slide><slide class=""><hgroup><h2>Future plans</h2></hgroup><article  id="future-plans">
-
-<ul>
-<li>XXX</li>
-</ul>
-
-<p><br/></p>
-
-<ul>
-<li>XXX</li>
-</ul>
-
-<p><br/></p>
-
-<ul>
-<li>XXX</li>
+</ul></li>
 </ul>
 
 </article></slide><slide class=""><hgroup><h2></h2></hgroup><article >

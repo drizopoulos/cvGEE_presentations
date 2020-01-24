@@ -9,7 +9,6 @@ output:
     mathjax: default
     logo: emc.png
 transition: none
-runtime: shiny
 ---
 
 <script type="text/x-mathjax-config">
@@ -21,8 +20,6 @@ library("cvGEE")
 library("geepack")
 library("splines")
 library("lattice")
-library("MESS")
-data("toenail", package = "HSAUR2")
 ```
 
 # Motivation
@@ -67,7 +64,7 @@ data("toenail", package = "HSAUR2")
 
 <br/>
 
-- GEEs have seen considerable development the last 20-30 year
+- GEEs have seen considerable development the last 20-30 years
   + missing data
   + causal inference
   + measurement error
@@ -131,8 +128,8 @@ with
 
 <br/>
 
-- But this is not proper for count data
-  + XXX
+- But this is not a scoring rule
+  + we only look at the mean <font color="red">*not*</font> the whole distribution
   
 ## Proper Scoring Rules
 
@@ -221,7 +218,7 @@ with
 
 <br/>
 
-- Calculation of proper scoring rules using cross-validation is implemented in
+- Calculation of proper scoring rules using cross-validation
 
 ## Implementation (cont'd)
 
@@ -233,25 +230,96 @@ with
   + `seed` the seed used in the calculation
   + `return_data` return results in a data frame
 
+## Example AIDS
+
+```{r AIDS_analysis_models, message = FALSE}
+aids$CD4count <- aids$CD4 * aids$CD4
+aids$obstimef <- factor(aids$obstime)
+
+fm1 <- geeglm(CD4count ~ obstimef * drug, family = poisson(), data = aids, 
+              id = patient, corstr = "independence")
+
+fm2 <- update(fm1, corstr = "exchangeable")
+
+fm3 <- update(fm1, corstr = "ar1")
+```
+
+## Example AIDS (cont'd)
+
+```{r AIDS_analysis_QIC, message = FALSE}
+t(sapply(list("independence" = fm1, "exchangeable" = fm2, "ar1" = fm3), QIC))
+```
+
+## Example AIDS (cont'd)
+
+```{r AIDS_analysis_cvGEE, message = FALSE}
+plot_data <- cv_gee(fm1, return_data = TRUE, max_count = 1000)
+plot_data$independence <- plot_data$.score
+
+plot_data$exchangeable <- unlist(cv_gee(fm2, max_count = 1000))
+
+plot_data$ar1 <- unlist(cv_gee(fm3, max_count = 1000))
+```
+
+## Example AIDS (cont'd)
+
+```{r AIDS_analysis_plot, message = FALSE, echo = FALSE}
+xyplot(independence + exchangeable + ar1 ~ obstime | .rule, 
+       data = plot_data, type = c("p", "smooth"), auto.key = TRUE, 
+       layout = c(3, 1), xlab = "Follow-up time (months)", ylab = "Scoring Rules",
+       scales = list(y = list(relation = "free")), pch = ".", lwd = 2)
+```
+
+## Example PBC
+
+```{r PBC_analysis_models, message = FALSE}
+pbc2$spiders2 <- as.numeric(pbc2$spiders == "Yes")
+fm1 <- geeglm(spiders2 ~ year + drug + age + sex,
+              family = binomial(), data = pbc2, id = id, 
+              corstr = "independence")
+
+fm2 <- update(fm1, formula = spiders2 ~ year + drug + age * sex)
+
+fm3 <- update(fm1, spiders2 ~ year * drug + ns(age, 2) * sex)
+```
+
+## Example PBC (cont'd)
+
+```{r PBC_analysis_QIC, message = FALSE}
+t(sapply(list("additive" = fm1, "interaction_I" = fm2, "interaction_II" = fm3), QIC))
+```
+
+## Example PBC (cont'd)
+
+```{r PBC_analysis_cvGEE, message = FALSE}
+plot_data <- cv_gee(fm1, return_data = TRUE)
+plot_data$additive <- plot_data$.score
+
+plot_data$interaction_I <- unlist(cv_gee(fm2))
+
+plot_data$interaction_II <- unlist(cv_gee(fm3))
+```
+
+## Example PBC (cont'd)
+
+```{r PBC_analysis_plot, message = FALSE, echo = FALSE}
+xyplot(additive + interaction_I + interaction_II ~ year | .rule, data = plot_data, 
+       type = c("p", "smooth"), auto.key = TRUE, pch = ".", lwd = 3,
+       scales = list(y = list(relation = "free")), layout = c(3, 1),
+       xlab = "Follow-up time (years)", ylab = "Scoring Rules")
+```
+
+## Discussion
+
+- Should we look at the mean or whole distribution?
+  + former inline with GEE specification
+  + latter gives a more complete picture
 
 <br/>
 
-- Dedicated website: [https://drizopoulos.github.io/cvGEE/](https://drizopoulos.github.io/cvGEE/)
-    
-# What the future holds...
+- cvGEE
+  + Dedicated website: [https://drizopoulos.github.io/cvGEE/](https://drizopoulos.github.io/cvGEE/)
 
-## Future plans
-
-- XXX
-
-<br/>
-
-- XXX
-
-<br/>
-
-- XXX
-    
 ***
 
 <br/> 
