@@ -143,11 +143,10 @@ with
 
 ## Proper Scoring Rules (cont'd)
 
-- A scoring rule $$R(\pi_{ij}, \{Y_{ij} = k\})$$ a function that assigns a score for the forecast $\{\pi_{ijk}; k = 1, \ldots, K\}$ upon observing the outcome $\{Y_{ij} = k\}$
-
 <br/>
 
-- Based on observing $Y_{ij}$, we get probabilities for all $K$ categories
+- A scoring rule $$R(\pi_{ij}, \{Y_{ij} = k\})$$ a function that assigns a score for the forecast $\{\pi_{ijk}; k = 1, \ldots, K\}$ upon observing the outcome $\{Y_{ij} = k\}$
+
 
 ## Proper Scoring Rules (cont'd)
 
